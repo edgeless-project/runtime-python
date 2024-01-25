@@ -34,7 +34,7 @@ class HostServicer(services_pb2_grpc.GuestAPIHost):
 
     def Call(self, request, context):
         logger.info("call() alias = {}, msg = {}".format(request.alias, request.msg))
-        return messages_pb2.CallReturn(type=messages_pb2.CALL_RET, msg=request.msg)
+        return messages_pb2.CallReturn(type=messages_pb2.CALL_RET_REPLY, msg=request.msg)
 
     def CallRaw(self, request, context):
         logger.info(
@@ -42,7 +42,7 @@ class HostServicer(services_pb2_grpc.GuestAPIHost):
                 request.dst.node_id, request.dst.function_id, request.msg
             )
         )
-        return messages_pb2.CallReturn(type=messages_pb2.CALL_RET, msg=request.msg)
+        return messages_pb2.CallReturn(type=messages_pb2.CALL_RET_REPLY, msg=request.msg)
 
     def TelemetryLog(self, request, context):
         logger.info(
@@ -124,8 +124,10 @@ class NodeEmulator:
                 msg=msg,
             )
         )
-        if reply.type == messages_pb2.CALL_RET:
+        if reply.type == messages_pb2.CALL_RET_REPLY:
             return reply.msg
+        elif reply.type == messages_pb2.CALL_RET_ERR:
+            return "err"
         return ""
 
     def stop(self) -> None:
@@ -184,15 +186,15 @@ if __name__ == "__main__":
     )
 
     for line in sys.stdin:
-        line = line.rstrip().lower()
-        if "quit" == line:
+        line = line.rstrip()
+        if "quit" == line.lower():
             node_emulator.stop()
             break
-        elif len(line) > 5 and "cast " == line[0:5]:
+        elif len(line) > 5 and "cast " == line[0:5].lower():
             node_emulator.cast(line[5:])
-        elif len(line) > 5 and "call " == line[0:5]:
+        elif len(line) > 5 and "call " == line[0:5].lower():
             print("reply: {}".format(node_emulator.call(line[5:])))
-        elif "help" == line:
+        elif "help" == line.lower():
             print(
                 """commands:
                   help         show this help

@@ -51,7 +51,7 @@ class TestFunctionServices(unittest.TestCase):
                 msg="event-payload",
             )
         )
-        self.assertEqual(reply.type, messages_pb2.CALL_RET)
+        self.assertEqual(reply.type, messages_pb2.CALL_RET_REPLY)
         self.assertEqual("event-payload", reply.msg)
         stub.Stop(google_dot_protobuf_dot_empty__pb2.Empty())
 

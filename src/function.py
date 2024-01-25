@@ -38,9 +38,9 @@ class Function:
         self.client.Cast(messages_pb2.OutputEventData(alias=alias, msg=msg))
 
     def cast_raw(self, node_id: str, function_id: str, msg: str) -> None:
-        self.client.Cast(
+        self.client.CastRaw(
             messages_pb2.OutputEventDataRaw(
-                instance_id=messages_pb2.InstanceId(
+                dst=messages_pb2.InstanceId(
                     node_id=node_id, function_id=function_id
                 ),
                 msg=msg,
@@ -71,8 +71,8 @@ class Function:
         return self.client.Slf(google_dot_protobuf_dot_empty__pb2.Empty())
 
     def delayed_cast(self, delay: int, alias: str, msg: str) -> None:
-        self.client.DelayedCastCast(
-            messages_pb2.DelayedEventDataEventData(alias=alias, msg=msg, delay=delay)
+        self.client.DelayedCast(
+            messages_pb2.DelayedEventData(alias=alias, msg=msg, delay=delay)
         )
 
     def wait(self) -> None:
