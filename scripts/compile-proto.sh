@@ -15,13 +15,14 @@ if [ $? -ne 0 ] ; then
   exit 1
 fi
 
-proto_files="services messages"
-
 pushd src
-for proto_file in $proto_files ; do
-  wget https://raw.githubusercontent.com/edgeless-project/edgeless/$BRANCH/edgeless_api/proto/$proto_file.proto
-done
-for proto_file in $proto_files ; do
-  python -m grpc_tools.protoc -I . --python_out=. --grpc_python_out=. $proto_file.proto
-done
+wget https://raw.githubusercontent.com/edgeless-project/edgeless/$BRANCH/edgeless_api/proto/services.proto
+wget https://raw.githubusercontent.com/edgeless-project/edgeless/$BRANCH/edgeless_api/proto/messages.proto
+python -m grpc_tools.protoc -I . --python_out=. --grpc_python_out=. services.proto
+protoc >& /dev/null
+if [ $? -eq 0 ] ; then
+  protoc -I . --python_out=. messages.proto
+else
+  python -m grpc_tools.protoc -I . --python_out=. --grpc_python_out=. messages.proto
+fi
 popd
