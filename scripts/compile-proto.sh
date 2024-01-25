@@ -1,5 +1,9 @@
 #!/bin/bash
 
+if [ "$BRANCH" == "" ] ; then
+  BRANCH=main
+fi
+
 if [ ! -d src ] ; then
   echo "Please run this script from the repo root"
   exit 1
@@ -12,7 +16,7 @@ if [ $? -ne 0 ] ; then
 fi
 
 pushd src
-wget https://raw.githubusercontent.com/edgeless-project/edgeless/main/edgeless_api/proto/services.proto
-wget https://raw.githubusercontent.com/edgeless-project/edgeless/main/edgeless_api/proto/messages.proto
+wget https://raw.githubusercontent.com/edgeless-project/edgeless/$BRANCH/edgeless_api/proto/services.proto
+wget https://raw.githubusercontent.com/edgeless-project/edgeless/$BRANCH/edgeless_api/proto/messages.proto
 python -m grpc_tools.protoc -I . --python_out=. --grpc_python_out=. services.proto
 popd
