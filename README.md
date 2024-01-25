@@ -2,7 +2,21 @@
 
 Run-time environment in Python for EDGELESS
 
-## How to build container
+## How to build
+
+The gRPC API specifications must be imported from the [core EDGELESS project](https://github.com/edgeless-project/edgeless). This can be done automatically with a script, which will also compile the protobuf data structures and stubs:
+
+```bash
+BRANCH=119-python-computational-container-runtime scripts/compile-proto.sh
+```
+
+The above step requires protoc and Python gRPC tools, which can be installed with:
+
+```
+pip install grpcio-tools
+```
+
+## How to create a Docker container
 
 Build with:
 
