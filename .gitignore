@@ -160,5 +160,4 @@ cython_debug/
 #.idea/
 
 src/*.proto
-src/services_pb2.py
-src/services_pb2_grpc.py
+src/*_pb2*.py
