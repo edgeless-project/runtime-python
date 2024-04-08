@@ -7,7 +7,7 @@ Run-time environment in Python for EDGELESS
 The gRPC API specifications must be imported from the [core EDGELESS project](https://github.com/edgeless-project/edgeless). This can be done automatically with a script, which will also compile the protobuf data structures and stubs:
 
 ```bash
-BRANCH=119-python-computational-container-runtime scripts/compile-proto.sh
+scripts/compile-proto.sh
 ```
 
 The above step requires protoc and Python gRPC tools, which can be installed with:
@@ -41,7 +41,7 @@ docker run -it --rm --network host edgeless-function
 On another launch the node command-line interface emulator:
 
 ```bash
-python src/node_cli.py
+python3 src/node_cli.py
 ```
 
 Examples of commands that you can feed to the emulator:
