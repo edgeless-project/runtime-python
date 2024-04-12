@@ -34,7 +34,9 @@ class HostServicer(services_pb2_grpc.GuestAPIHost):
 
     def Call(self, request, context):
         logger.info("call() alias = {}, msg = {}".format(request.alias, request.msg))
-        return messages_pb2.CallReturn(type=messages_pb2.CALL_RET_REPLY, msg=request.msg)
+        return messages_pb2.CallReturn(
+            type=messages_pb2.CALL_RET_REPLY, msg=request.msg
+        )
 
     def CallRaw(self, request, context):
         logger.info(
@@ -42,7 +44,9 @@ class HostServicer(services_pb2_grpc.GuestAPIHost):
                 request.dst.node_id, request.dst.function_id, request.msg
             )
         )
-        return messages_pb2.CallReturn(type=messages_pb2.CALL_RET_REPLY, msg=request.msg)
+        return messages_pb2.CallReturn(
+            type=messages_pb2.CALL_RET_REPLY, msg=request.msg
+        )
 
     def TelemetryLog(self, request, context):
         logger.info(
@@ -75,7 +79,7 @@ class NodeEmulator:
         function_endpoint: str,
         max_workers: int,
         init_payload: str,
-        serialized_state: str,
+        serialized_state: bytes,
     ) -> None:
         """Create a node emulator exposing a GuestAPIHost server and using a GuestAPIFunction client"""
 
@@ -105,7 +109,7 @@ class NodeEmulator:
             )
         )
 
-    def cast(self, msg: str) -> str:
+    def cast(self, msg: bytes) -> str:
         self.client.Cast(
             messages_pb2.InputEventData(
                 src=messages_pb2.InstanceId(
@@ -115,7 +119,7 @@ class NodeEmulator:
             )
         )
 
-    def call(self, msg: str) -> str:
+    def call(self, msg: bytes) -> str:
         reply = self.client.Call(
             messages_pb2.InputEventData(
                 src=messages_pb2.InstanceId(
@@ -182,7 +186,7 @@ if __name__ == "__main__":
         function_endpoint=args.function_endpoint,
         max_workers=args.max_workers,
         init_payload=args.init_payload,
-        serialized_state=args.serialized_state,
+        serialized_state=bytes(args.serialized_state, encoding="utf8"),
     )
 
     for line in sys.stdin:
@@ -191,9 +195,11 @@ if __name__ == "__main__":
             node_emulator.stop()
             break
         elif len(line) > 5 and "cast " == line[0:5].lower():
-            node_emulator.cast(line[5:])
+            node_emulator.cast(bytes(line[5:], encoding="utf8"))
         elif len(line) > 5 and "call " == line[0:5].lower():
-            print("reply: {}".format(node_emulator.call(line[5:])))
+            print(
+                "reply: {}".format(node_emulator.call(bytes(line[5:], encoding="utf8")))
+            )
         elif "help" == line.lower():
             print(
                 """commands:

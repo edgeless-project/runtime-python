@@ -34,24 +34,22 @@ class Function:
         self.server.add_insecure_port("[::]:{}".format(port))
         self.server.start()
 
-    def cast(self, alias: str, msg: str) -> None:
+    def cast(self, alias: str, msg: bytes) -> None:
         self.client.Cast(messages_pb2.OutputEventData(alias=alias, msg=msg))
 
-    def cast_raw(self, node_id: str, function_id: str, msg: str) -> None:
+    def cast_raw(self, node_id: str, function_id: str, msg: bytes) -> None:
         self.client.CastRaw(
             messages_pb2.OutputEventDataRaw(
-                dst=messages_pb2.InstanceId(
-                    node_id=node_id, function_id=function_id
-                ),
+                dst=messages_pb2.InstanceId(node_id=node_id, function_id=function_id),
                 msg=msg,
             )
         )
 
-    def call(self, alias: str, msg: str) -> messages_pb2.CallReturn:
+    def call(self, alias: str, msg: bytes) -> messages_pb2.CallReturn:
         return self.client.Call(messages_pb2.OutputEventData(alias=alias, msg=msg))
 
     def call_raw(
-        self, node_id: str, function_id: str, msg: str
+        self, node_id: str, function_id: str, msg: bytes
     ) -> messages_pb2.CallReturn:
         return self.client.CallRaw(
             messages_pb2.OutputEventDataRaw(
@@ -70,7 +68,7 @@ class Function:
     def slf(self) -> messages_pb2.InstanceId:
         return self.client.Slf(google_dot_protobuf_dot_empty__pb2.Empty())
 
-    def delayed_cast(self, delay: int, alias: str, msg: str) -> None:
+    def delayed_cast(self, delay: int, alias: str, msg: bytes) -> None:
         self.client.DelayedCast(
             messages_pb2.DelayedEventData(alias=alias, msg=msg, delay=delay)
         )

@@ -31,16 +31,29 @@ class FunctionServicer(services_pb2_grpc.GuestAPIFunction):
             )
         )
 
-        tokens = request.msg.strip().split(' ')
-        if len(tokens) == 3 and 'recast' == tokens[0]:
-            self.function_api.cast(alias=tokens[1], msg=tokens[2])
-        elif len(tokens) == 4 and 'recast-raw' == tokens[0]:
-            self.function_api.cast_raw(node_id=tokens[1], function_id=tokens[2], msg=tokens[3])
-        elif len(tokens) == 4 and 'recast-delayed' == tokens[0]:
-            self.function_api.delayed_cast(delay=int(tokens[1]), alias=tokens[2], msg=tokens[3])
-        elif len(tokens) == 3 and 'telemetry-log' == tokens[0]:
-            self.function_api.telemetry_log(log_level=messages_pb2.LOG_INFO, target=tokens[1], msg=tokens[2])
-    
+        tokens = str(request.msg, encoding="utf8").strip().split(" ")
+        if len(tokens) == 3 and "recast" == tokens[0]:
+            self.function_api.cast(
+                alias=tokens[1], msg=bytes(tokens[2], encoding="utf8")
+            )
+        elif len(tokens) == 4 and "recast-raw" == tokens[0]:
+            self.function_api.cast_raw(
+                node_id=tokens[1],
+                function_id=tokens[2],
+                msg=bytes(tokens[3], encoding="utf8"),
+            )
+        elif len(tokens) == 4 and "recast-delayed" == tokens[0]:
+            self.function_api.delayed_cast(
+                delay=int(tokens[1]),
+                alias=tokens[2],
+                msg=bytes(tokens[3], encoding="utf8"),
+            )
+        elif len(tokens) == 3 and "telemetry-log" == tokens[0]:
+            self.function_api.telemetry_log(
+                log_level=messages_pb2.LOG_INFO,
+                target=tokens[1],
+                msg=bytes(tokens[2], encoding="utf8"),
+            )
 
         return google_dot_protobuf_dot_empty__pb2.Empty()
 
@@ -51,17 +64,25 @@ class FunctionServicer(services_pb2_grpc.GuestAPIFunction):
             )
         )
 
-        tokens = request.msg.strip().split(' ')
-        if len(tokens) == 3 and 'recall' == tokens[0]:
-            self.function_api.call(alias=tokens[1], msg=tokens[2])
-        elif len(tokens) == 4 and 'recall-raw' == tokens[0]:
-            self.function_api.call_raw(node_id=tokens[1], function_id=tokens[2], msg=tokens[3])
-        elif len(tokens) == 1 and 'noret' == tokens[0]:
+        tokens = str(request.msg, encoding="utf8").strip().split(" ")
+        if len(tokens) == 3 and "recall" == tokens[0]:
+            self.function_api.call(
+                alias=tokens[1], msg=bytes(tokens[2], encoding="utf8")
+            )
+        elif len(tokens) == 4 and "recall-raw" == tokens[0]:
+            self.function_api.call_raw(
+                node_id=tokens[1],
+                function_id=tokens[2],
+                msg=bytes(tokens[3], encoding="utf8"),
+            )
+        elif len(tokens) == 1 and "noret" == tokens[0]:
             return messages_pb2.CallReturn(type=messages_pb2.CALL_NO_RET)
-        elif len(tokens) == 1 and 'err' == tokens[0]:
+        elif len(tokens) == 1 and "err" == tokens[0]:
             return messages_pb2.CallReturn(type=messages_pb2.CALL_RET_ERR)
-        
-        return messages_pb2.CallReturn(type=messages_pb2.CALL_RET_REPLY, msg=request.msg)
+
+        return messages_pb2.CallReturn(
+            type=messages_pb2.CALL_RET_REPLY, msg=request.msg
+        )
 
     def Stop(self, request, context):
         logger.info("stop()")
