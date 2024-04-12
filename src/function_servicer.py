@@ -12,6 +12,11 @@ class FunctionServicer(services_pb2_grpc.GuestAPIFunction):
     def __init__(self, function_api):
         self.function_api = function_api
 
+    def Boot(self, request, context):
+        logger.info("boot() host_endpoint {}".format(request.guest_api_host_endpoint))
+        self.function_api.connect_to_server(request.guest_api_host_endpoint)
+        return google_dot_protobuf_dot_empty__pb2.Empty()
+
     def Init(self, request, context):
         slf = self.function_api.slf()
         logger.info(

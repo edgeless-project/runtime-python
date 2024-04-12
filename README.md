@@ -7,7 +7,7 @@ Run-time environment in Python for EDGELESS
 The gRPC API specifications must be imported from the [core EDGELESS project](https://github.com/edgeless-project/edgeless). This can be done automatically with a script, which will also compile the protobuf data structures and stubs:
 
 ```bash
-scripts/compile-proto.sh
+BRANCH=125-computational-container-runtime scripts/compile-proto.sh
 ```
 
 The above step requires protoc and Python gRPC tools, which can be installed with:

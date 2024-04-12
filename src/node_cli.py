@@ -3,6 +3,7 @@ from concurrent import futures
 import sys
 import argparse
 import uuid
+from time import sleep
 
 import grpc
 
@@ -75,13 +76,28 @@ class HostServicer(services_pb2_grpc.GuestAPIHost):
 class NodeEmulator:
     def __init__(
         self,
-        port: int,
+        host_endpoint: str,
         function_endpoint: str,
         max_workers: int,
         init_payload: str,
         serialized_state: bytes,
     ) -> None:
         """Create a node emulator exposing a GuestAPIHost server and using a GuestAPIFunction client"""
+
+        # Create the server
+        logger.info(
+            "starting server at {} with max {} workers".format(
+                host_endpoint, max_workers
+            )
+        )
+        self.server = grpc.server(futures.ThreadPoolExecutor(max_workers=max_workers))
+        services_pb2_grpc.add_GuestAPIHostServicer_to_server(
+            HostServicer(node_id=str(uuid.uuid4()), function_id=str(uuid.uuid4())),
+            self.server,
+        )
+        self.server.add_insecure_port(host_endpoint)
+        self.server.start()
+        sleep(0.1)  # make sure server is started when we issue the boot() command below
 
         # Create the client
         logger.info(
@@ -90,17 +106,8 @@ class NodeEmulator:
         channel = grpc.insecure_channel(function_endpoint)
         self.client = services_pb2_grpc.GuestAPIFunctionStub(channel)
 
-        # Create the server
-        logger.info(
-            "starting server at [::]:{} with max {} workers".format(port, max_workers)
-        )
-        self.server = grpc.server(futures.ThreadPoolExecutor(max_workers=max_workers))
-        services_pb2_grpc.add_GuestAPIHostServicer_to_server(
-            HostServicer(node_id=str(uuid.uuid4()), function_id=str(uuid.uuid4())),
-            self.server,
-        )
-        self.server.add_insecure_port("[::]:{}".format(port))
-        self.server.start()
+        # Call boot()
+        self.client.Boot(messages_pb2.BootData(guest_api_host_endpoint=host_endpoint))
 
         # Call init()
         self.client.Init(
@@ -153,10 +160,10 @@ if __name__ == "__main__":
         "--log-level", type=str, default="WARNING", help="Set the log level"
     )
     parser.add_argument(
-        "--port",
-        type=int,
-        default=50050,
-        help="Listening port",
+        "--host-endpoint",
+        type=str,
+        default="localhost:50050",
+        help="Server end-point (address:port)",
     )
     parser.add_argument(
         "--function-endpoint",
@@ -182,7 +189,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     node_emulator = NodeEmulator(
-        port=args.port,
+        host_endpoint=args.host_endpoint,
         function_endpoint=args.function_endpoint,
         max_workers=args.max_workers,
         init_payload=args.init_payload,

@@ -15,13 +15,11 @@ logger = logging.getLogger(__name__)
 
 
 class Function:
-    def __init__(self, port: int, host_endpoint: str, max_workers: int) -> None:
+    def __init__(self, port: int, max_workers: int) -> None:
         """Create a function instance exposing a GuestAPIFunction server and using a GuestAPIHost client"""
 
-        # Create the client
-        logger.info("starting a client towards remote host at {}".format(host_endpoint))
-        channel = grpc.insecure_channel(host_endpoint)
-        self.client = services_pb2_grpc.GuestAPIHostStub(channel)
+        # The client will be initialized in connect_to_server()
+        self.client = None
 
         # Create the server
         logger.info(
@@ -34,10 +32,18 @@ class Function:
         self.server.add_insecure_port("[::]:{}".format(port))
         self.server.start()
 
+    def connect_to_server(self, host_endpoint: str) -> None:
+        # Create the client
+        logger.info("starting a client towards remote host at {}".format(host_endpoint))
+        channel = grpc.insecure_channel(host_endpoint)
+        self.client = services_pb2_grpc.GuestAPIHostStub(channel)
+
     def cast(self, alias: str, msg: bytes) -> None:
+        assert self.client is not None
         self.client.Cast(messages_pb2.OutputEventData(alias=alias, msg=msg))
 
     def cast_raw(self, node_id: str, function_id: str, msg: bytes) -> None:
+        assert self.client is not None
         self.client.CastRaw(
             messages_pb2.OutputEventDataRaw(
                 dst=messages_pb2.InstanceId(node_id=node_id, function_id=function_id),
@@ -46,11 +52,13 @@ class Function:
         )
 
     def call(self, alias: str, msg: bytes) -> messages_pb2.CallReturn:
+        assert self.client is not None
         return self.client.Call(messages_pb2.OutputEventData(alias=alias, msg=msg))
 
     def call_raw(
         self, node_id: str, function_id: str, msg: bytes
     ) -> messages_pb2.CallReturn:
+        assert self.client is not None
         return self.client.CallRaw(
             messages_pb2.OutputEventDataRaw(
                 instance_id=messages_pb2.InstanceId(
@@ -61,14 +69,17 @@ class Function:
         )
 
     def telemetry_log(self, log_level: int, target: str, msg: str) -> None:
+        assert self.client is not None
         self.client.TelemetryLog(
             messages_pb2.TelemetryLogEvent(log_level=log_level, target=target, msg=msg)
         )
 
     def slf(self) -> messages_pb2.InstanceId:
+        assert self.client is not None
         return self.client.Slf(google_dot_protobuf_dot_empty__pb2.Empty())
 
     def delayed_cast(self, delay: int, alias: str, msg: bytes) -> None:
+        assert self.client is not None
         self.client.DelayedCast(
             messages_pb2.DelayedEventData(alias=alias, msg=msg, delay=delay)
         )
@@ -96,12 +107,6 @@ if __name__ == "__main__":
         help="Listening port",
     )
     parser.add_argument(
-        "--host-endpoint",
-        type=str,
-        default="localhost:50050",
-        help="Endpoint (address:port) of the host",
-    )
-    parser.add_argument(
         "--max-workers",
         type=int,
         default=10,
@@ -109,7 +114,5 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    function = Function(
-        port=args.port, host_endpoint=args.host_endpoint, max_workers=args.max_workers
-    )
+    function = Function(port=args.port, max_workers=args.max_workers)
     function.wait()
