@@ -1,5 +1,9 @@
+# SPDX-FileCopyrightText: © 2024 Claudio Cicconetti <c.cicconetti@iit.cnr.it>
+# SPDX-License-Identifier: MIT
+
 import unittest
 import grpc
+import uuid
 from concurrent import futures
 
 from google.protobuf import empty_pb2 as google_dot_protobuf_dot_empty__pb2
@@ -11,10 +15,13 @@ import function_servicer
 
 
 class FunctionApiStub:
-    def slf(self) -> messages_pb2.InstanceId:
-        return messages_pb2.InstanceId(
-            node_id="slf-node-id", function_id="slf-function-id"
-        )
+    def connect_to_server(
+        self, host_endpoint: str, instance_id: messages_pb2.InstanceId
+    ) -> None:
+        pass
+
+    def cast(self, alias: str, msg: bytes) -> None:
+        pass
 
 
 class TestFunctionServices(unittest.TestCase):
@@ -27,12 +34,23 @@ class TestFunctionServices(unittest.TestCase):
         server.add_insecure_port("[::]:50051")
         server.start()
 
+        instance_id = messages_pb2.InstanceId(
+            node_id=str(uuid.uuid4()), function_id=str(uuid.uuid4())
+        )
+
         # Create and start a client calling all the server methods.
         channel = grpc.insecure_channel("localhost:50051")
         stub = services_pb2_grpc.GuestAPIFunctionStub(channel)
+        stub.Boot(
+            messages_pb2.BootData(
+                guest_api_host_endpoint="http://localhost:50051/",
+                instance_id=instance_id,
+            )
+        )
         stub.Init(
             messages_pb2.FunctionInstanceInit(
-                init_payload="init_payload", serialized_state="aaa"
+                init_payload="init_payload",
+                serialized_state=bytes("aaa", encoding="utf8"),
             )
         )
         stub.Cast(
@@ -40,7 +58,7 @@ class TestFunctionServices(unittest.TestCase):
                 src=messages_pb2.InstanceId(
                     node_id="my-node-id", function_id="my-fun-id"
                 ),
-                msg="event-payload",
+                msg=bytes("event-payload", encoding="utf8"),
             )
         )
         reply = stub.Call(
@@ -48,11 +66,11 @@ class TestFunctionServices(unittest.TestCase):
                 src=messages_pb2.InstanceId(
                     node_id="my-node-id", function_id="my-fun-id"
                 ),
-                msg="event-payload",
+                msg=bytes("event-payload", encoding="utf8"),
             )
         )
         self.assertEqual(reply.type, messages_pb2.CALL_RET_REPLY)
-        self.assertEqual("event-payload", reply.msg)
+        self.assertEqual(bytes("event-payload", encoding="utf8"), reply.msg)
         stub.Stop(google_dot_protobuf_dot_empty__pb2.Empty())
 
         # Terminate

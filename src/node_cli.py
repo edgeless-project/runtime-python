@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: © 2024 Claudio Cicconetti <c.cicconetti@iit.cnr.it>
+# SPDX-License-Identifier: MIT
+
 import logging
 from concurrent import futures
 import sys
@@ -16,33 +19,50 @@ logger = logging.getLogger(__name__)
 
 
 class HostServicer(services_pb2_grpc.GuestAPIHost):
-    def __init__(self, node_id: str, function_id: str):
-        self.instance_id = messages_pb2.InstanceId(
-            node_id=node_id, function_id=function_id
-        )
-
     def Cast(self, request, context):
-        logger.info("cast() alias = {}, msg = {}".format(request.alias, request.msg))
+        logger.info(
+            "cast() originator node_id {} function_id {}, alias = {}, msg = {}".format(
+                request.originator.node_id,
+                request.originator.function_id,
+                request.alias,
+                request.msg,
+            )
+        )
         return google_dot_protobuf_dot_empty__pb2.Empty()
 
     def CastRaw(self, request, context):
         logger.info(
-            "cast-raw() node_id = {}, function_id = {}, msg = {}".format(
-                request.dst.node_id, request.dst.function_id, request.msg
+            "cast-raw() originator node_id {} function_id {}, dst node_id = {}, function_id = {}, msg = {}".format(
+                request.originator.node_id,
+                request.originator.function_id,
+                request.dst.node_id,
+                request.dst.function_id,
+                request.msg,
             )
         )
         return google_dot_protobuf_dot_empty__pb2.Empty()
 
     def Call(self, request, context):
-        logger.info("call() alias = {}, msg = {}".format(request.alias, request.msg))
+        logger.info(
+            "call() originator node_id {} function_id {}, alias = {}, msg = {}".format(
+                request.originator.node_id,
+                request.originator.function_id,
+                request.alias,
+                request.msg,
+            )
+        )
         return messages_pb2.CallReturn(
             type=messages_pb2.CALL_RET_REPLY, msg=request.msg
         )
 
     def CallRaw(self, request, context):
         logger.info(
-            "call-raw() node_id = {}, function_id = {}, msg = {}".format(
-                request.dst.node_id, request.dst.function_id, request.msg
+            "call-raw() originator node_id {} function_id {}, dst node_id = {}, function_id = {}, msg = {}".format(
+                request.originator.node_id,
+                request.originator.function_id,
+                request.dst.node_id,
+                request.dst.function_id,
+                request.msg,
             )
         )
         return messages_pb2.CallReturn(
@@ -51,25 +71,41 @@ class HostServicer(services_pb2_grpc.GuestAPIHost):
 
     def TelemetryLog(self, request, context):
         logger.info(
-            "telemetry-log() level {}, target {}, msg {}".format(
-                request.log_level, request.target, request.msg
+            "telemetry-log() originator node_id {} function_id {}, level {}, target {}, msg {}".format(
+                request.originator.node_id,
+                request.originator.function_id,
+                request.log_level,
+                request.target,
+                request.msg,
             )
         )
         return google_dot_protobuf_dot_empty__pb2.Empty()
 
     def Slf(self, request, context):
-        return self.instance_id
+        return messages_pb2.InstanceId(
+            node_id=uuid.UUID(int=0), function_id=uuid.UUID(int=0)
+        )
 
     def DelayedCast(self, request, context):
         logger.info(
-            "cast() alias = {}, msg = {}, delay = {} ms".format(
-                request.alias, request.msg, request.delay
+            "delayed-cast() originator node_id {} function_id {}, alias = {}, msg = {}, delay = {} ms".format(
+                request.originator.node_id,
+                request.originator.function_id,
+                request.alias,
+                request.msg,
+                request.delay,
             )
         )
         return google_dot_protobuf_dot_empty__pb2.Empty()
 
     def Sync(self, request, context):
-        logger.info("sync() msg size {} bytes".format(len(request.serialized_state)))
+        logger.info(
+            "sync() originator node_id {} function_id {}, msg size {} bytes".format(
+                request.originator.node_id,
+                request.originator.function_id,
+                len(request.serialized_state),
+            )
+        )
         return google_dot_protobuf_dot_empty__pb2.Empty()
 
 
@@ -90,9 +126,13 @@ class NodeEmulator:
                 host_endpoint, max_workers
             )
         )
+        self.instance_id = messages_pb2.InstanceId(
+            node_id=str(uuid.uuid4()), function_id=str(uuid.uuid4())
+        )
+
         self.server = grpc.server(futures.ThreadPoolExecutor(max_workers=max_workers))
         services_pb2_grpc.add_GuestAPIHostServicer_to_server(
-            HostServicer(node_id=str(uuid.uuid4()), function_id=str(uuid.uuid4())),
+            HostServicer(),
             self.server,
         )
         self.server.add_insecure_port(host_endpoint)
@@ -107,7 +147,12 @@ class NodeEmulator:
         self.client = services_pb2_grpc.GuestAPIFunctionStub(channel)
 
         # Call boot()
-        self.client.Boot(messages_pb2.BootData(guest_api_host_endpoint=host_endpoint))
+        self.client.Boot(
+            messages_pb2.BootData(
+                guest_api_host_endpoint="http://{}/".format(host_endpoint),
+                instance_id=self.instance_id,
+            )
+        )
 
         # Call init()
         self.client.Init(
@@ -168,7 +213,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--function-endpoint",
         type=str,
-        default="localhost:50051",
+        default="localhost:7101",
         help="Endpoint (address:port) of the function instance",
     )
     parser.add_argument(
@@ -196,6 +241,15 @@ if __name__ == "__main__":
         serialized_state=bytes(args.serialized_state, encoding="utf8"),
     )
 
+    print_help = lambda: print(
+        """commands:
+                  help         show this help
+                  cast MSG     send cast() with given payload 
+                  call MSG     send call() with given payload
+                  quit         send a stop() command and quit"""
+    )
+
+    print_help()
     for line in sys.stdin:
         line = line.rstrip()
         if "quit" == line.lower():
@@ -208,12 +262,6 @@ if __name__ == "__main__":
                 "reply: {}".format(node_emulator.call(bytes(line[5:], encoding="utf8")))
             )
         elif "help" == line.lower():
-            print(
-                """commands:
-                  help         show this help
-                  cast MSG     send cast() with given payload 
-                  call MSG     send call() with given payload 
-                  quit         send a stop() command and quit"""
-            )
+            print_help()
         else:
             print("unknown command: {}".format(line))
